@@ -1,5 +1,10 @@
 import os
 import yaml
+from datetime import datetime
+
+def log(msg):
+    ts = datetime.now().strftime("%H:%M:%S")
+    print(f"[{ts}] {msg}", flush=True)
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -8,17 +13,15 @@ OUTPUT_DIR = os.path.join(BASE_DIR, "wynik")
 TRANSLATE_FILE = os.path.join(BASE_DIR, "to_translate.yml")
 
 if not os.path.exists(SOURCE_DIR):
-    print(f"BŁĄD: Nie znaleziono folderu source: {SOURCE_DIR}")
-    input("Naciśnij Enter, aby zakończyć...")
-    sys.exit(1)
+    log(f"BŁĄD: Nie znaleziono folderu source: {SOURCE_DIR}")
+    exit(1)
 
 # Wczytanie to_translate
 try:
     with open(TRANSLATE_FILE, "r", encoding="utf-8") as f:
         lines = f.readlines()
 except Exception as e:
-    print(f"Nie udało się wczytać pliku {TRANSLATE_FILE}: {e}")
-    input("Naciśnij Enter, aby zakończyć...")
+    log(f"Nie udało się wczytać pliku {TRANSLATE_FILE}: {e}")
     exit(1)
 
 # Podział na bloki po "### FILE:"
@@ -41,9 +44,11 @@ all_tags = ["name", "display_name", "itemname"]
 for block in blocks:
     file_name = block[0].replace("### FILE:", "").strip()
     source_file = os.path.join(SOURCE_DIR, file_name)
+    
+    log(f"\n--- Przetworzono plik: {file_name} ---")
 
     if not os.path.exists(source_file):
-        print(f"Plik {file_name} nie istnieje w folderze source. Pomijam.")
+        log(f"Plik {file_name} nie istnieje w folderze source. Pomijam.")
         continue
 
     # Wyciąganie tagów i lore z bloku
@@ -78,7 +83,7 @@ for block in blocks:
             if source_data is None:
                 source_data = {}
     except Exception as e:
-        print(f"Nie udało się wczytać pliku {file_name} jako YAML: {e}")
+        log(f"Nie udało się wczytać pliku {file_name} jako YAML: {e}")
         continue
 
     # Kontroler stanu podmiany
@@ -93,7 +98,8 @@ for block in blocks:
                 if k in all_tags and tag_values[k]:
                     old = obj[k]
                     obj[k] = tag_values[k].pop(0)
-                    print(f" - {k} podmienione: '{old}' → '{obj[k]}'")
+                    log(f"    - {k} podmienione: ")
+                    log(f"        > '{old}' -> '{obj[k]}'")
                 elif k == "lore" and lore_block:
                     obj[k] = list(lore_block) # Kopiujemy listę lore
                     state["lore_replaced"] = True
@@ -111,9 +117,10 @@ for block in blocks:
         with open(out_path, "w", encoding="utf-8") as f:
             # Ustawienia dump zapewniają ładny format Minecraftowy
             yaml.dump(source_data, f, allow_unicode=True, sort_keys=False, default_flow_style=False)
-        print(f"Przetworzono plik: {file_name}")
-        print(f" - lore podmienione: {'Tak' if state['lore_replaced'] else 'Nie'}\n")
-    except Exception as e:
-        print(f"Nie udało się zapisać pliku {file_name}: {e}")
 
-input("Przetwarzanie zakończone. Wyniki znajdziesz w folderze 'wynik'. Naciśnij Enter...")
+        log(f"    - Zapisano lore:{' Tak' if state['lore_replaced'] else ' Nie znaleziono'}")
+        log("-" * (25 + len(file_name)))
+    except Exception as e:
+        log(f"Nie udało się zapisać pliku {file_name}: {e}")
+
+log("Przetwarzanie zakończone. Wyniki znajdziesz w folderze 'wynik'.")
