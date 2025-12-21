@@ -22,21 +22,36 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 # ---------- LOGIKA MUZYKI ----------
 class MusicPlayer:
-    def __init__(self, label_var): 
+    def __init__(self, label_var, root): 
         pygame.mixer.init()
         self.label_var = label_var
+        self.root = root
         # Lista piosenek - program szuka wszystkich plików muzycznych w folderze
         extensions = ('.mp3', '.mod', '.xm', '.it', '.s3m', '.wav')
         self.playlist = [f for f in os.listdir(BASE_DIR) if f.lower().endswith(extensions)]
         self.current_index = 0
         self.is_paused = False
 
+        self.check_music()
     def play(self):
         if self.playlist:
             path = os.path.join(BASE_DIR, self.playlist[self.current_index])
             pygame.mixer.music.load(path)
-            pygame.mixer.music.play(-1)
-            print(f">>> Gram: {self.playlist[self.current_index]}")
+            # Zmieniamy z -1 na 0 (0 oznacza zagranie piosenki raz)
+            pygame.mixer.music.play(0)
+            
+            # AKTUALIZACJA NAZWY W GUI:
+            track_name = self.playlist[self.current_index]
+            self.label_var.set(f"Gram: {track_name}") 
+            print(f">>> Gram: {track_name}")
+
+    def check_music(self):
+        # Jeśli muzyka przestała grać i nie jest wciśnięta pauza -> następny utwór
+        if not pygame.mixer.music.get_busy() and not self.is_paused:
+            self.next_track()
+        
+        # Sprawdzaj co 2 sekundy (2000 ms)
+        self.root.after(2000, self.check_music)
 
     def toggle_pause(self, btn):
         if self.is_paused:
@@ -51,7 +66,6 @@ class MusicPlayer:
         if self.playlist:
             self.current_index = (self.current_index + 1) % len(self.playlist)
             self.play()
-
 
 # ---------- LOGGER ----------
 class GuiLogger:
@@ -69,6 +83,35 @@ class GuiLogger:
 
 
 # ---------- FUNKCJE ----------
+def run_generate_ai():
+    threading.Thread(target=_run_generate_ai_task, daemon=True).start()
+
+def _run_generate_ai_task():
+    try:
+        process = subprocess.Popen(
+            [sys.executable, os.path.join(BASE_DIR, "generate_ai_translate.py")],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+            bufsize=1
+        )
+
+        for line in process.stdout:
+            print(line, end="")  # trafia do GuiLogger
+
+        process.wait()
+
+        if process.returncode == 0:
+            messagebox.showinfo(
+                "Gotowe",
+                "Plik to_translate.yml został wygenerowany."
+            )
+        else:
+            messagebox.showerror("Błąd", "Wystąpił błąd podczas generowania.")
+
+    except Exception as e:
+        messagebox.showerror("Błąd", str(e))
+
 
 def run_generate():
     threading.Thread(target=_run_generate_task, daemon=True).start()
@@ -105,7 +148,7 @@ def run_apply():
     threading.Thread(target=_run_apply, daemon=True).start()
 
 def _run_apply():
-    print(">>> Aplikowanie tłumaczenia...")
+    print(">>> Dodawanie tłumaczenia...")
     try:
         process = subprocess.Popen(
             [sys.executable, os.path.join(BASE_DIR, "apply_translation.py")],
@@ -145,7 +188,15 @@ root.configure(bg="#1e1e1e")
 
 # Inicjalizacja odtwarzacza przed resztą GUI
 song_name_var = tk.StringVar(value="Brak muzyki")
-player = MusicPlayer(song_name_var)
+# ---- PANEL MUZYCZNY (Nad konsolą) ----
+music_frame = tk.Frame(root, bg="#1e1e1e")
+music_frame.grid(row=4, column=0, sticky="ew", padx=15, pady=5)
+
+# Nazwa piosenki (po lewej stronie panelu)
+song_label = tk.Label(music_frame, textvariable=song_name_var, font=("Consolas", 9), fg="#888", bg="#1e1e1e")
+song_label.pack(side="left", padx=5)
+
+player = MusicPlayer(song_name_var, root)
 
 # Włącz ciemny pasek tytułowy
 try: set_dark_title_bar(root)
@@ -166,30 +217,58 @@ title = tk.Label(
     root, text="YML TRANSLATOR API", 
     font=("Segoe UI", 18, "bold"), fg="#00ff88", bg="#1e1e1e"
 )
+title.grid(row=0, column=0, pady=10)
+
+# --- NAGŁÓWEK ---
+title = tk.Label(
+    root, text="YML TRANSLATOR API", 
+    font=("Segoe UI", 18, "bold"), fg="#00ff88", bg="#1e1e1e"
+)
 title.grid(row=0, column=0, pady=20)
 
-btn_generate = tk.Button(
-    root, text="Generuj plik to_translate.yml",
-    width=35, height=2, command=run_generate,
-    bg="#333", fg="white", activebackground="#00ff88", font=("Segoe UI", 10, "bold"),
+# --- PANEL PRZYCISKÓW (Kontener na przyciski) ---
+buttons_frame = tk.Frame(root, bg="#1e1e1e")
+buttons_frame.grid(row=1, column=0, pady=5, padx=20, sticky="nsew")
+buttons_frame.grid_columnconfigure(0, weight=1) # Lewa strona
+buttons_frame.grid_columnconfigure(1, weight=1) # Prawa strona
+
+# Lewa strona - pionowo dwa przyciski
+left_buttons_frame = tk.Frame(buttons_frame, bg="#1e1e1e")
+left_buttons_frame.grid(row=0, column=0, padx=10)
+
+btn_generate_yml = tk.Button(
+    left_buttons_frame, text="Wyciągnij tekst do tłumaczenia",
+    width=30, height=2, command=run_generate,
+    bg="#333", fg="white", activebackground="#00ff88", font=("Segoe UI", 9, "bold"),
     relief="flat"
 )
-btn_generate.grid(row=1, column=0, pady=5)
+btn_generate_yml.pack(pady=5)
 
 btn_apply = tk.Button(
-    root, text="Zastosuj tlumaczenie",
-    width=35, height=2, command=run_apply,
-    bg="#333", fg="white", activebackground="#00ff88", font=("Segoe UI", 10, "bold"),
+    left_buttons_frame, text="Zastosuj tłumaczenie",
+    width=30, height=2, command=run_apply,
+    bg="#333", fg="white", activebackground="#00ff88", font=("Segoe UI", 9, "bold"),
     relief="flat"
 )
-btn_apply.grid(row=2, column=0, pady=5)
+btn_apply.pack(pady=5)
 
+# Prawa strona - jeden duży przycisk AI
+btn_ai_generate = tk.Button(
+    buttons_frame, text="GENERUJ\nTŁUMACZENIE AI",
+    width=25, height=5, command=run_generate_ai, # Tutaj podepnij odpowiednią funkcję
+    bg="#005f44", fg="#00ff88", activebackground="#00ff88", font=("Segoe UI", 10, "bold"),
+    relief="flat", bd=2
+)
+btn_ai_generate.grid(row=0, column=1, padx=10, sticky="ns")
+
+# --- INFO ---
 info = tk.Label(
     root, text="F11: Pełny ekran | Logi poniżej",
     font=("Segoe UI", 9), fg="#888", bg="#1e1e1e"
 )
 info.grid(row=3, column=0, pady=10)
 
+# Dalej idzie reszta Twojego kodu (Style, Music Player, Log Box...)
 style = ttk.Style()
 style.theme_use('clam') # 'clam' najlepiej współpracuje z ciemnymi kolorami
 
@@ -206,13 +285,6 @@ style.map("Vertical.TScrollbar",
     background=[('active', '#444444')] # Kolor po najechaniu myszką
 )
 
-# ---- PANEL MUZYCZNY (Nad konsolą) ----
-music_frame = tk.Frame(root, bg="#1e1e1e")
-music_frame.grid(row=4, column=0, sticky="ew", padx=15, pady=5)
-
-# Nazwa piosenki (po lewej stronie panelu)
-song_label = tk.Label(music_frame, textvariable=song_name_var, font=("Consolas", 9), fg="#888", bg="#1e1e1e")
-song_label.pack(side="left", padx=5)
 
 # Przyciski sterowania (po prawej stronie panelu)
 btn_next = tk.Button(music_frame, text="NASTĘPNA", width=10, bg="#333", fg="#00ff88", font=("Segoe UI", 8, "bold"), relief="flat", 
