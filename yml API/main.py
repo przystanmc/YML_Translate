@@ -389,45 +389,6 @@ def run_apply():
 def toggle_fullscreen(event=None):
     is_full = root.attributes("-fullscreen")
     root.attributes("-fullscreen", not is_full)    
-
-import random
-
-class Equalizer:
-    def __init__(self, parent, num_bars=15):
-        self.canvas = tk.Canvas(parent, width=120, height=30, bg="#1e1e1e", highlightthickness=0)
-        self.canvas.pack(side="left", padx=10)
-        self.bars = []
-        self.num_bars = num_bars
-        self.bar_width = 6
-        
-        for i in range(num_bars):
-            x0 = i * (self.bar_width + 2)
-            y0 = 30
-            x1 = x0 + self.bar_width
-            y1 = 30
-            bar = self.canvas.create_rectangle(x0, y0, x1, y1, fill="#00ff88", outline="")
-            self.bars.append(bar)
-        
-        # Nie wywołujemy self.animate() tutaj! 
-        # Zrobimy to po zainicjowaniu playera.
-
-    def animate(self):
-        try:
-            # Sprawdzamy czy mixer działa i czy player istnieje
-            if pygame.mixer.get_init() and pygame.mixer.music.get_busy() and not getattr(player, 'is_paused', False):
-                for bar in self.bars:
-                    new_h = random.randint(2, 28)
-                    x0, _, x1, _ = self.canvas.coords(bar)
-                    self.canvas.coords(bar, x0, 30 - new_h, x1, 30)
-            else:
-                for bar in self.bars:
-                    x0, _, x1, _ = self.canvas.coords(bar)
-                    self.canvas.coords(bar, x0, 28, x1, 30)
-        except:
-            pass # Ignoruj błędy jeśli player jeszcze się ładuje
-        
-        self.canvas.after(100, self.animate)
-
 # --- GUI ---
 root = tk.Tk()
 root.title("YML Translator API")
@@ -448,25 +409,17 @@ root.grid_rowconfigure(4, weight=0) # Panel muzyczny - stała wysokość
 root.grid_rowconfigure(5, weight=1) # Konsola - rozciąga się
 root.grid_columnconfigure(0, weight=1)
 
-# 1. NAJPIERW TWORZYMY RAMKĘ (Kontener)
+# Inicjalizacja odtwarzacza przed resztą GUI
+song_name_var = tk.StringVar(value="Brak muzyki")
+# ---- PANEL MUZYCZNY (Nad konsolą) ----
 music_frame = tk.Frame(root, bg="#1e1e1e")
 music_frame.grid(row=4, column=0, sticky="ew", padx=15, pady=5)
 
-# 2. INICJALIZUJEMY ZMIENNĄ TEKSTOWĄ
-song_name_var = tk.StringVar(value="Brak muzyki")
-
-# 3. DODAJEMY ETYKIETĘ DO RAMKI
+# Nazwa piosenki (po lewej stronie panelu)
 song_label = tk.Label(music_frame, textvariable=song_name_var, font=("Consolas", 9), fg="#888", bg="#1e1e1e")
 song_label.pack(side="left", padx=5)
 
-# 4. TWORZYMY EQUALIZER (Wewnątrz music_frame)
-visualizer = Equalizer(music_frame)
-
-# 5. TWORZYMY PLAYERA (Zmienna 'player' musi być dostępna dla equalizera)
 player = MusicPlayer(song_name_var, root)
-
-# 6. URUCHAMIAMY ANIMACJĘ Z OPÓŹNIENIEM
-root.after(1000, visualizer.animate)
 
 # Włącz ciemny pasek tytułowy
 try: set_dark_title_bar(root)
