@@ -1,0 +1,85 @@
+windmill_large:
+  itemname: Large Windmill Blueprint
+  lore: "large"
+  material: PAPER
+  Pack:
+    model: workshop_six/utilities/blueprint
+    custom_model_data: 1003
+  Mechanics:
+    furniture:
+      rotatable: false
+      limited_placing:
+        roof: false
+        floor: false
+        wall: true
+      restricted_rotation: VERY_STRICT
+      block_sounds:
+        place_sound: block.wood.place
+      modelengine_id: windmill_large
+      hitbox:
+        barriers:
+        - 0,0,0
+      drop:
+        silktouch: false
+        loots:
+        - nexo_item: windmill_large
+          probability: 1.0
+      properties:
+        display_transform: NONE
+windmill_medium:
+  itemname: Medium Windmill Blueprint
+  lore: 
+  - "medium"
+  material: PAPER
+  Pack:
+    model: workshop_six/utilities/blueprint
+    custom_model_data: 1003
+  Mechanics:
+    furniture:
+      rotatable: false
+      limited_placing:
+        roof: false
+        floor: false
+        wall: true
+      restricted_rotation: VERY_STRICT
+      block_sounds:
+        place_sound: block.wood.place
+      modelengine_id: windmill_medium
+      hitbox:
+        barriers:
+        - 0,0,0
+      drop:
+        silktouch: false
+        loots:
+        - nexo_item: windmill_medium
+          probability: 1.0
+      properties:
+        display_transform: NONE
+windmill_small:
+  itemname: Small Windmill Blueprint
+  material: PAPER
+  Pack:
+    model: workshop_six/utilities/blueprint
+    custom_model_data: 1003
+  Mechanics:
+    furniture:
+      rotatable: false
+      limited_placing:
+        roof: false
+        floor: false
+        wall: true
+      restricted_rotation: VERY_STRICT
+      block_sounds:
+        place_sound: block.wood.place
+      modelengine_id: windmill_small
+      hitbox:
+        barriers:
+        - 0,0,0
+      drop:
+        silktouch: false
+        loots:
+        - nexo_item: windmill_small
+          probability: 1.0
+      properties:
+        display_transform: NONE
+# 586049XOPHX836I
